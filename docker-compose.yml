@@ -1,0 +1,92 @@
+networks:
+  portainer-network:
+    external: true
+  traefik-network:
+    external: true
+
+volumes:
+  portainer-data:
+  traefik-certificates:
+
+services:
+  portainer:
+    image: ${PORTAINER_IMAGE_TAG}
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - portainer-network
+      - traefik-network
+    labels:
+      # Enable Traefik for this container
+      - "traefik.enable=true"
+      # ---------------- Portainer frontend (UI) on dedicated port 9443 ----------------
+      # Match incoming requests on a specific hostname
+      - "traefik.http.routers.portainer-frontend.rule=Host(`${PORTAINER_FRONTEND_HOSTNAME}`)"
+      # Assign the router to a named Traefik service
+      - "traefik.http.routers.portainer-frontend.service=portainer-frontend"
+      # Use the dedicated 'portainer' entry point (port 9443)
+      - "traefik.http.routers.portainer-frontend.entrypoints=portainer"
+      # Define the internal container port for routing
+      - "traefik.http.services.portainer-frontend.loadbalancer.server.port=9000"
+      # Enable TLS on this router
+      - "traefik.http.routers.portainer-frontend.tls=true"
+      # Use Let's Encrypt for certificate management
+      - "traefik.http.routers.portainer-frontend.tls.certresolver=letsencrypt"
+      # Pass the original Host header to the container
+      - "traefik.http.services.portainer-frontend.loadbalancer.passhostheader=true"
+      # Apply a compression middleware
+      - "traefik.http.routers.portainer-frontend.middlewares=compresstraefik"
+      # Define settings for the compression middleware
+      - "traefik.http.middlewares.compresstraefik.compress=true"
+      # Specify which Docker network Traefik should use for routing
+      - "traefik.docker.network=traefik-network"
+    restart: unless-stopped
+    depends_on:
+      traefik:
+        condition: service_healthy
+
+  traefik:
+    image: ${TRAEFIK_IMAGE_TAG}
+    environment:
+      # Força a versão da API do daemon (evita o erro "client version 1.24 is too old").
+      # Ajuste para a versão reportada pelo daemon da VM, se necessário.
+      - DOCKER_API_VERSION=${DOCKER_API_VERSION:-1.44}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certificates:/etc/traefik/acme
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic:/etc/traefik/dynamic:ro
+    networks:
+      - traefik-network
+    ports:
+      - "80:80"
+      - "443:443"
+      # Dedicated port for the Portainer UI
+      - "9443:9443"
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:8082/ping","--spider"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    labels:
+      # Enable Traefik for this container
+      - "traefik.enable=true"
+      # A router to expose the Traefik dashboard (on websecure / port 443)
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      # Basic Authentication for the Traefik dashboard
+      - "traefik.http.routers.dashboard.middlewares=authtraefik"
+      - "traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+      # Specify the internal server port to the dashboard service
+      - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
+      # Pass the original Host header to the backend
+      - "traefik.http.services.dashboard.loadbalancer.passhostheader=true"
+    restart: unless-stopped

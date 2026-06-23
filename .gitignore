@@ -1,0 +1,10 @@
+# Local environment variables containing secrets
+.env
+
+# Docker files
+.docker/
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
