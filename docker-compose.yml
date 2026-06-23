@@ -55,6 +55,8 @@ services:
       # Força a versão da API do daemon (evita o erro "client version 1.24 is too old").
       # Ajuste para a versão reportada pelo daemon da VM, se necessário.
       - DOCKER_API_VERSION=${DOCKER_API_VERSION:-1.44}
+      - TRAEFIK_LOG_LEVEL=${TRAEFIK_LOG_LEVEL:-INFO}
+      - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL=${TRAEFIK_ACME_EMAIL}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certificates:/etc/traefik/acme

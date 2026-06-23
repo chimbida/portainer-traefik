@@ -2,9 +2,6 @@ global:
   checkNewVersion: true
   sendAnonymousUsage: false
 
-log:
-  level: "${TRAEFIK_LOG_LEVEL:-INFO}"
-
 api:
   dashboard: true
   insecure: false
@@ -40,7 +37,6 @@ providers:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: "${TRAEFIK_ACME_EMAIL}"
       storage: "/etc/traefik/acme/acme.json"
       httpChallenge:
         entryPoint: web
