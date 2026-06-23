@@ -43,6 +43,7 @@ certificatesResolvers:
 
 metrics:
   prometheus:
+    entryPoint: ping
     buckets:
       - 0.1
       - 0.3

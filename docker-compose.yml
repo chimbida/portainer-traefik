@@ -45,6 +45,8 @@ services:
       # Specify which Docker network Traefik should use for routing
       - "traefik.docker.network=traefik-network"
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"
     depends_on:
       traefik:
         condition: service_healthy
@@ -69,6 +71,8 @@ services:
       - "443:443"
       # Dedicated port for the Portainer UI
       - "9443:9443"
+      # Ping / metrics endpoint exposed to localhost only
+      - "127.0.0.1:8082:8082"
     healthcheck:
       test: ["CMD", "wget", "http://localhost:8082/ping","--spider"]
       interval: 10s
