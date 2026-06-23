@@ -15,8 +15,8 @@ graph TD
     Traefik -->|Internal routing| OtherContainers[Other Containers / Stacks]
     
     subgraph Networks
-        traefik-network[traefik-network (External)]
-        portainer-network[portainer-network (External)]
+        traefik-network["traefik-network (External)"]
+        portainer-network["portainer-network (External)"]
     end
     
     Portainer -.->|Attached to| portainer-network
